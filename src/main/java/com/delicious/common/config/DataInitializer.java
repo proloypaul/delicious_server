@@ -5,6 +5,8 @@ import com.delicious.domain.product.entity.Product;
 import com.delicious.domain.product.enums.ProductStatus;
 import com.delicious.domain.product.repository.CategoryRepository;
 import com.delicious.domain.product.repository.ProductRepository;
+import com.delicious.domain.seller.entity.SellerProfile;
+import com.delicious.domain.seller.repository.SellerProfileRepository;
 import com.delicious.domain.user.entity.User;
 import com.delicious.domain.user.enums.UserRole;
 import com.delicious.domain.user.enums.UserStatus;
@@ -24,6 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final SellerProfileRepository sellerProfileRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -56,6 +59,15 @@ public class DataInitializer implements CommandLineRunner {
                 .status(UserStatus.ACTIVE)
                 .build();
         userRepository.save(seller);
+
+        // Create Seller Profile
+        SellerProfile sellerProfile = SellerProfile.builder()
+                .user(seller)
+                .storeName("Alice's Burger Shack")
+                .description("The best burgers in town")
+                .address("123 Burger Lane")
+                .build();
+        sellerProfileRepository.save(sellerProfile);
 
         // Create a Category
         Category fastFood = Category.builder()

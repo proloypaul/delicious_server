@@ -21,6 +21,8 @@ public class ProductResponse {
     private Integer makingTime;
     private ProductStatus status;
     private Long sellerId;
+    private String sellerName;
+    private String storeName;
     private CategoryResponse category;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

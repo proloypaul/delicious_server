@@ -14,7 +14,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = {"category"})
     Page<Product> findAll(Pageable pageable);
 
-    // Filter by category name (case-insensitive) — single JOIN query, no N+1
     @EntityGraph(attributePaths = {"category"})
     Page<Product> findByCategoryNameIgnoreCase(String categoryName, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category"})
+    Page<Product> findBySellerId(Long sellerId, Pageable pageable);
 }
