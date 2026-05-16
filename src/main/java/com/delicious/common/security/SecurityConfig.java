@@ -24,16 +24,13 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/customers/**").permitAll() // Temporarily permit all for testing without JWT
-                .requestMatchers("/api/v1/products/**").permitAll() // Temporarily permit all for testing without JWT
-                .requestMatchers("/api/v1/categories/**").permitAll() // Temporarily permit all for testing without JWT
-                // Allow Swagger UI
+                .requestMatchers("/api/v1/customers/**").permitAll()
+                .requestMatchers("/api/v1/products/**").permitAll()
+                .requestMatchers("/api/v1/categories/**").permitAll()
                 .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // Allow H2 console
                 .requestMatchers("/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )
-            // Enable headers frame options for H2 console
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
 
         return http.build();
