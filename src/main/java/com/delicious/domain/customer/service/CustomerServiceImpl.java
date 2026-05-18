@@ -47,4 +47,14 @@ public class CustomerServiceImpl implements CustomerService {
 
         return customerMapper.toProfileResponse(updatedUser, profile);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<CustomerProfileResponse> getAllCustomers(org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<User> users = userService.getUsersByRole(com.delicious.domain.user.enums.UserRole.CUSTOMER, pageable);
+        return users.map(user -> {
+            CustomerProfile profile = customerProfileRepository.findByUserId(user.getId()).orElse(null);
+            return customerMapper.toProfileResponse(user, profile);
+        });
+    }
 }

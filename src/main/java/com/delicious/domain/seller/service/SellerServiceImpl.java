@@ -94,4 +94,11 @@ public class SellerServiceImpl implements SellerService {
                         u -> sellerMapper.toProfileResponse(u, profileMap.get(u.getId()))
                 ));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SellerProfileResponse> getAllSellers(Pageable pageable) {
+        Page<SellerProfile> profiles = sellerProfileRepository.findAll(pageable);
+        return profiles.map(p -> sellerMapper.toProfileResponse(p.getUser(), p));
+    }
 }

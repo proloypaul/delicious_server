@@ -59,4 +59,12 @@ public class SellerController {
         String message = products.isEmpty() ? "seller don't have any product" : "Seller products retrieved successfully";
         return ResponseEntity.ok(ApiResponse.success(products, message));
     }
+
+    @Operation(summary = "Get all sellers")
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<SellerProfileResponse>>> getAllSellers(
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<SellerProfileResponse> response = sellerService.getAllSellers(pageable);
+        return ResponseEntity.ok(ApiResponse.success(response, "Sellers retrieved successfully"));
+    }
 }

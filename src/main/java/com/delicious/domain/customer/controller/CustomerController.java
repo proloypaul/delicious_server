@@ -37,4 +37,12 @@ public class CustomerController {
         CustomerProfileResponse response = customerService.updateProfile(userId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Profile updated successfully"));
     }
+
+    @Operation(summary = "Get All Customers", description = "Retrieves a paginated list of all customers (Admin role)")
+    @GetMapping
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<CustomerProfileResponse>>> getAllCustomers(
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<CustomerProfileResponse> response = customerService.getAllCustomers(pageable);
+        return ResponseEntity.ok(ApiResponse.success(response, "Customers retrieved successfully"));
+    }
 }

@@ -57,4 +57,18 @@ public class UserServiceImpl implements UserService {
     public List<User> getUsersByIds(Collection<Long> ids) {
         return userRepository.findAllById(ids);
     }
+
+    @Override
+    @Transactional
+    public User updateUserStatus(Long id, UserStatus status) {
+        User user = getUserById(id);
+        user.setStatus(status);
+        return userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<User> getUsersByRole(UserRole role, org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findByRole(role, pageable);
+    }
 }

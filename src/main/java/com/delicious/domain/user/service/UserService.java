@@ -11,4 +11,6 @@ public interface UserService {
     User updateProfile(Long id, String name, String phone);
     User createUser(String name, String email, String phone, String password, UserRole role, UserStatus status);
     List<User> getUsersByIds(Collection<Long> ids);
+    User updateUserStatus(Long id, UserStatus status);
+    org.springframework.data.domain.Page<User> getUsersByRole(UserRole role, org.springframework.data.domain.Pageable pageable);
 }
