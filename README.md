@@ -525,7 +525,24 @@ The test suite uses Spring Boot's integration testing support with a real Postgr
 
 ---
 
+## 📌 Project Disclaimer
+
+> This project was developed as a **learning and academic exercise** to explore and demonstrate proficiency in building a domain-driven REST API using the Spring Boot ecosystem.
+
+While the codebase reflects real-world structural patterns — including layered architecture, exception handling, database migrations, multi-profile configuration, and observability — it is **not intended for production deployment in its current state**.
+
+In particular:
+
+- **Authentication** is partially implemented. Password hashing with BCrypt is fully functional; however, **JWT token issuance and stateless session validation are not yet integrated**. User identity for protected endpoints is currently passed as a request parameter as a temporary measure during development.
+- **Authorization (RBAC)** — role-based access control to restrict endpoints by user role — is planned but not enforced at this stage.
+
+These aspects represent natural next steps in the evolution of the project, and the existing architecture has been designed to accommodate them cleanly.
+
+---
+
 <div align="center">
+
+Built for learning purposes · Academic Practice Project
 
 Made with ❤️ using Spring Boot
 
