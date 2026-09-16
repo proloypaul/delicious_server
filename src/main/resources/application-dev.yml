@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/deliciousdb
+    username: postgres
+    password: utsha
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: false
+    baseline-on-migrate: false
+
+server:
+  port: 9080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:3001,http://localhost:3002

@@ -16,7 +16,7 @@ import com.delicious.domain.product.service.ProductService;
 import com.delicious.domain.rider.dto.RiderResponse;
 import com.delicious.domain.rider.service.RiderService;
 import com.delicious.domain.order.exception.OrderNotFoundException;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -140,7 +141,7 @@ public class OrderServiceImpl implements OrderService {
                     .phone(customerProfile.getPhone())
                     .build());
         } catch (Exception e) {
-            // Handle gracefully if customer not found
+            log.error("Failed to fetch customer profile for order enrichment, customerId: {}", order.getCustomerId(), e);
         }
 
         // Fetch and set rider details
@@ -154,7 +155,7 @@ public class OrderServiceImpl implements OrderService {
                         .vehicleRegistrationNumber(rider.getVehicleRegistrationNumber())
                         .build());
             } catch (Exception e) {
-                // Handle gracefully if rider not found
+                log.error("Failed to fetch rider profile for order enrichment, riderId: {}", order.getRiderId(), e);
             }
         }
 
