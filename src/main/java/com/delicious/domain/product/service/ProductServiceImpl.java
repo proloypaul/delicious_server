@@ -9,6 +9,8 @@ import com.delicious.domain.product.repository.CategoryRepository;
 import com.delicious.domain.product.repository.ProductRepository;
 import com.delicious.domain.seller.dto.SellerProfileResponse;
 import com.delicious.domain.seller.service.SellerService;
+import com.delicious.common.exception.ResourceNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
@@ -34,7 +37,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
         Product product = productMapper.toEntity(request, category);
         Product saved = productRepository.save(product);
@@ -58,7 +61,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         return enrichWithSellerInfo(productMapper.toResponse(product));
     }
 
@@ -66,10 +69,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
         product.setFoodName(request.getFoodName());
         product.setDescription(request.getDescription());
@@ -87,7 +90,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Product not found with id: " + id);
+            throw new ResourceNotFoundException("Product not found with id: " + id);
         }
         productRepository.deleteById(id);
     }
@@ -109,7 +112,7 @@ public class ProductServiceImpl implements ProductService {
             response.setStoreName(seller.getStoreName());
         } catch (Exception e) {
             // Log and continue if seller info cannot be fetched
-            System.err.println("Failed to fetch seller info for sellerId: " + response.getSellerId());
+            log.error("Failed to fetch seller info for sellerId: {}", response.getSellerId(), e);
         }
         return response;
     }
@@ -132,7 +135,7 @@ public class ProductServiceImpl implements ProductService {
                 }
             });
         } catch (Exception e) {
-            System.err.println("Failed to fetch seller info in batch for sellerIds: " + sellerIds);
+            log.error("Failed to fetch seller info in batch for sellerIds: {}", sellerIds, e);
         }
 
         return page;

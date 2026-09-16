@@ -5,6 +5,8 @@ import com.delicious.domain.product.dto.CategoryResponse;
 import com.delicious.domain.product.entity.Category;
 import com.delicious.domain.product.mapper.CategoryMapper;
 import com.delicious.domain.product.repository.CategoryRepository;
+import com.delicious.common.exception.ResourceNotFoundException;
+import com.delicious.common.exception.ResourceAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new RuntimeException("Category with name '" + request.getName() + "' already exists.");
+            throw new ResourceAlreadyExistsException("Category with name '" + request.getName() + "' already exists.");
         }
 
         Category category = Category.builder()
@@ -44,7 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
         return categoryMapper.toResponse(category);
     }
 
@@ -52,12 +54,12 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
 
         // Check name conflict only if the name is actually changing
         if (!category.getName().equalsIgnoreCase(request.getName())
                 && categoryRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new RuntimeException("Category with name '" + request.getName() + "' already exists.");
+            throw new ResourceAlreadyExistsException("Category with name '" + request.getName() + "' already exists.");
         }
 
         category.setName(request.getName());
@@ -70,7 +72,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found with id: " + id);
+            throw new ResourceNotFoundException("Category not found with id: " + id);
         }
         categoryRepository.deleteById(id);
     }
