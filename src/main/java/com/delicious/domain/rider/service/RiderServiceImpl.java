@@ -96,13 +96,23 @@ public class RiderServiceImpl implements RiderService {
     @Override
     @Transactional
     public OrderResponse updateDeliveryStatus(Long orderId, DeliveryStatusUpdateRequest request, Long riderId) {
-        Order order = orderRepository.findById(orderId)
+        /*
+         * ACID fix: Use PESSIMISTIC_WRITE lock to acquire a row-level DB lock
+         * before reading the order. This prevents two riders from simultaneously
+         * claiming the same PENDING order (race condition / lost update problem).
+         */
+        Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
 
         if (request.getStatus() == OrderStatus.ACCEPTED_BY_RIDER) {
+            // Guard: reject if already claimed by another rider
+            if (order.getRiderId() != null) {
+                throw new IllegalStateException(
+                    "Order #" + orderId + " has already been accepted by another rider.");
+            }
             order.setRiderId(riderId);
         } else {
-            // Verify if the order belongs to this rider
+            // For subsequent status updates, verify this rider owns the order
             if (order.getRiderId() == null || !order.getRiderId().equals(riderId)) {
                 throw new IllegalStateException("You are not assigned to this order");
             }

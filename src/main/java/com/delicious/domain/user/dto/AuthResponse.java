@@ -21,5 +21,6 @@ public class AuthResponse {
     private UserRole role;
     private UserStatus status;
     private LocalDateTime createdAt;
-    // JWT token will be added here later
+    /** Signed JWT token — include in subsequent requests as: Authorization: Bearer <token> */
+    private String token;
 }

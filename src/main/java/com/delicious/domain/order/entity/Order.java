@@ -9,6 +9,17 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Named Entity Graphs defined here:
+ *
+ *  "Order.withItems"  — eagerly fetches order_items in a single JOIN.
+ *                       Use via @EntityGraph("Order.withItems") in the repository
+ *                       to avoid N+1 queries when iterating order collections.
+ */
+@NamedEntityGraph(
+    name = "Order.withItems",
+    attributeNodes = @NamedAttributeNode("items")
+)
 @Entity
 @Table(name = "orders") // "order" is a reserved keyword in SQL
 @Getter
