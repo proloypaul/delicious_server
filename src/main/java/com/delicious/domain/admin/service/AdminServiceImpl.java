@@ -33,7 +33,7 @@ public class AdminServiceImpl implements AdminService {
         long pendingOrders = orderRepository.countByOrderStatus(OrderStatus.PENDING);
         long deliveredOrders = orderRepository.countByOrderStatus(OrderStatus.DELIVERED);
         
-        BigDecimal totalRevenue = orderRepository.sumTotalAmountByDeliveredStatus();
+        BigDecimal totalRevenue = orderRepository.sumTotalAmountByStatus(OrderStatus.DELIVERED);
 
         return AdminStatsResponse.builder()
                 .totalCustomers(totalCustomers)

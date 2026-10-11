@@ -11,6 +11,7 @@ public interface RiderService {
     RiderResponse registerRider(RiderRegistrationRequest request);
     Page<RiderResponse> getAllRiders(Pageable pageable);
     RiderResponse getRiderById(Long userId);
+    java.util.Map<Long, RiderResponse> getRidersByUserIds(java.util.Collection<Long> userIds);
     Page<OrderResponse> getRiderOrders(Long riderId, Pageable pageable);
     OrderResponse updateDeliveryStatus(Long orderId, DeliveryStatusUpdateRequest request, Long riderId);
 }

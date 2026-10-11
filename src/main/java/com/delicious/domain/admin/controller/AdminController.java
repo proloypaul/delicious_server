@@ -21,6 +21,7 @@ public class AdminController {
 
     @Operation(summary = "Get Dashboard Stats", description = "Retrieves platform-wide counters, performance indicators and total revenue metrics.")
     @GetMapping("/dashboard/stats")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<AdminStatsResponse>> getDashboardStats() {
         AdminStatsResponse stats = adminService.getDashboardStats();
         return ResponseEntity.ok(ApiResponse.success(stats, "Dashboard statistics retrieved successfully"));

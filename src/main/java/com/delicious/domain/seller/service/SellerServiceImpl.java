@@ -29,7 +29,7 @@ public class SellerServiceImpl implements SellerService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SellerProfileResponse register(SellerRegistrationRequest request) {
         // Create User with ROLE_SELLER and INACTIVE status
         User user = userService.createUser(

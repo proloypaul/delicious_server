@@ -57,4 +57,22 @@ public class CustomerServiceImpl implements CustomerService {
             return customerMapper.toProfileResponse(user, profile);
         });
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, CustomerProfileResponse> getProfilesByUserIds(java.util.Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        java.util.List<User> users = userService.getUsersByIds(userIds);
+        java.util.List<CustomerProfile> profiles = customerProfileRepository.findAllByUserIdIn(userIds);
+        java.util.Map<Long, CustomerProfile> profileMap = profiles.stream()
+                .collect(java.util.stream.Collectors.toMap(p -> p.getUser().getId(), p -> p, (p1, p2) -> p1));
+
+        return users.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        User::getId,
+                        u -> customerMapper.toProfileResponse(u, profileMap.get(u.getId()))
+                ));
+    }
 }

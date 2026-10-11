@@ -40,6 +40,7 @@ public class CustomerController {
 
     @Operation(summary = "Get All Customers", description = "Retrieves a paginated list of all customers (Admin role)")
     @GetMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<CustomerProfileResponse>>> getAllCustomers(
             @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         org.springframework.data.domain.Page<CustomerProfileResponse> response = customerService.getAllCustomers(pageable);
