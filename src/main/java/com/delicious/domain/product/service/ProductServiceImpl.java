@@ -31,7 +31,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
-    private final @Lazy SellerService sellerService; // Use @Lazy to prevent potential circular dependency if SellerService ever needs ProductService back
+    private final SellerService sellerService;
 
     @Override
     @Transactional

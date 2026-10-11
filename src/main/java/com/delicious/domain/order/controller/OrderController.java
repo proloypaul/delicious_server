@@ -49,6 +49,7 @@ public class OrderController {
 
     @GetMapping
     @Operation(summary = "Get all orders (admin/system)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getAllOrders(Pageable pageable) {
         Page<OrderResponse> response = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(response, "All orders retrieved successfully"));
@@ -56,6 +57,7 @@ public class OrderController {
 
     @PutMapping("/status")
     @Operation(summary = "Update order status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'SELLER', 'RIDER')")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
             @Valid @RequestBody OrderStatusUpdateRequest request) {
         OrderResponse response = orderService.updateOrderStatus(request.getOrderId(), request.getStatus());

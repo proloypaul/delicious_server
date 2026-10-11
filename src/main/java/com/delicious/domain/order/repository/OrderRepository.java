@@ -32,6 +32,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByRiderId(Long riderId, Pageable pageable);
 
     /**
+     * All orders paginated — uses Entity Graph to prevent N+1 on items.
+     */
+    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.LOAD)
+    Page<Order> findAll(Pageable pageable);
+
+    /**
      * Pessimistic write lock — used by riders accepting an order.
      * Acquires a row-level DB lock so only ONE rider can claim the order.
      * Any concurrent transaction attempting the same order will wait/fail.

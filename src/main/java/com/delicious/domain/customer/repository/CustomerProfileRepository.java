@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface CustomerProfileRepository extends JpaRepository<CustomerProfile, Long> {
     Optional<CustomerProfile> findByUserId(Long userId);
+    java.util.List<CustomerProfile> findAllByUserIdIn(java.util.Collection<Long> userIds);
 }

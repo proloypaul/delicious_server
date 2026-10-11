@@ -18,6 +18,7 @@ public class UserController {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Update user status (ACTIVE/INACTIVE)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> updateStatus(
             @PathVariable Long id,
             @RequestParam UserStatus status) {

@@ -35,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RiderProfileRepository riderProfileRepository;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final com.delicious.domain.coupon.repository.CouponRepository couponRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -165,6 +166,18 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             productRepository.save(burger);
             log.info("Seeded Product.");
+        }
+
+        // Seed Default Promo Coupon
+        if (!couponRepository.existsByCodeIgnoreCase("DELICIOUS50")) {
+            com.delicious.domain.coupon.entity.Coupon promo = com.delicious.domain.coupon.entity.Coupon.builder()
+                    .code("DELICIOUS50")
+                    .discountAmount(new BigDecimal("50.00"))
+                    .minOrderAmount(new BigDecimal("150.00"))
+                    .active(true)
+                    .build();
+            couponRepository.save(promo);
+            log.info("Seeded Promo Coupon DELICIOUS50.");
         }
     }
 }

@@ -25,6 +25,8 @@ public class OrderRequest {
 
     private BigDecimal discount;
 
+    private String couponCode;
+
     @NotEmpty(message = "Order must contain at least one item")
     @Valid
     private List<OrderItemRequest> items;

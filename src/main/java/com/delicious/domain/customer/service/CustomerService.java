@@ -7,4 +7,5 @@ public interface CustomerService {
     CustomerProfileResponse getProfile(Long userId);
     CustomerProfileResponse updateProfile(Long userId, UpdateCustomerProfileRequest request);
     org.springframework.data.domain.Page<CustomerProfileResponse> getAllCustomers(org.springframework.data.domain.Pageable pageable);
+    java.util.Map<Long, CustomerProfileResponse> getProfilesByUserIds(java.util.Collection<Long> userIds);
 }

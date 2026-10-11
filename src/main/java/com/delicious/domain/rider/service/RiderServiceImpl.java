@@ -25,6 +25,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.delicious.domain.order.mapper.OrderMapper;
+
 @Service
 @RequiredArgsConstructor
 public class RiderServiceImpl implements RiderService {
@@ -32,12 +34,12 @@ public class RiderServiceImpl implements RiderService {
     private final UserRepository userRepository;
     private final RiderProfileRepository riderProfileRepository;
     private final OrderRepository orderRepository;
-    private final OrderService orderService;
+    private final OrderMapper orderMapper;
     private final PasswordEncoder passwordEncoder;
     private final RiderMapper riderMapper;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public RiderResponse registerRider(RiderRegistrationRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email is already in use");
@@ -89,8 +91,27 @@ public class RiderServiceImpl implements RiderService {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Map<Long, RiderResponse> getRidersByUserIds(java.util.Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        java.util.List<User> users = userRepository.findAllById(userIds);
+        java.util.List<RiderProfile> profiles = riderProfileRepository.findAllByUserIdIn(userIds);
+        java.util.Map<Long, RiderProfile> profileMap = profiles.stream()
+                .collect(java.util.stream.Collectors.toMap(p -> p.getUser().getId(), p -> p, (p1, p2) -> p1));
+
+        return users.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        User::getId,
+                        u -> riderMapper.toRiderResponse(u, profileMap.get(u.getId()))
+                ));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getRiderOrders(Long riderId, Pageable pageable) {
-        return orderService.getOrdersByRider(riderId, pageable);
+        return orderRepository.findByRiderId(riderId, pageable)
+                .map(orderMapper::toOrderResponse);
     }
 
     @Override
@@ -119,8 +140,8 @@ public class RiderServiceImpl implements RiderService {
         }
 
         order.setOrderStatus(request.getStatus());
-        orderRepository.save(order);
+        Order updated = orderRepository.save(order);
 
-        return orderService.getOrderById(orderId);
+        return orderMapper.toOrderResponse(updated);
     }
 }

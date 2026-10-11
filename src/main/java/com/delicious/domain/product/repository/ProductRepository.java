@@ -19,4 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @EntityGraph(attributePaths = {"category"})
     Page<Product> findBySellerId(Long sellerId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category"})
+    java.util.List<Product> findByIdInAndStatus(java.util.Collection<Long> ids, com.delicious.domain.product.enums.ProductStatus status);
 }

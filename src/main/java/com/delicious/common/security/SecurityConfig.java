@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/sellers/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/coupons/validate").permitAll()
 
                 // ── Registration (POST only — handled by each domain controller) ────
                 .requestMatchers(HttpMethod.POST, "/api/v1/sellers/register").permitAll()
