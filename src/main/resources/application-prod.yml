@@ -30,3 +30,13 @@ management:
 
 cors:
   allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000}
+
+jwt:
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1kZWxpY2lvdXMtYXBwLXRoYXQtaXMtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZw==}
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}             # 15 minutes
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+cookie:
+  secure: ${COOKIE_SECURE:true}
+  same-site: ${COOKIE_SAME_SITE:None}
+  domain: ${COOKIE_DOMAIN:}

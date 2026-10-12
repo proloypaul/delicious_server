@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/deliciousdb
     username: postgres
-    password: utsha
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -34,4 +34,10 @@ cors:
 
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1kZWxpY2lvdXMtYXBwLXRoYXQtaXMtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZw==}
-  expiration-ms: 86400000   # 24 hours in milliseconds
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}             # 15 minutes
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+cookie:
+  secure: false
+  same-site: Lax
+  domain: ""

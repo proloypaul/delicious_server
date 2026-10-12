@@ -37,10 +37,14 @@ public class AuthServiceImpl implements AuthService {
         User newUser = userMapper.toEntity(request, encodedPassword);
         User savedUser = userRepository.save(newUser);
 
-        // Generate JWT immediately after registration so the user is logged in
-        String token = generateTokenForUser(savedUser);
+        // Generate JWT access and refresh tokens immediately after registration
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(savedUser.getEmail());
+        String token = jwtService.generateToken(userDetails, savedUser.getId());
+        String refreshToken = jwtService.generateRefreshToken(userDetails, savedUser.getId());
+
         AuthResponse response = userMapper.toAuthResponse(savedUser);
         response.setToken(token);
+        response.setRefreshToken(refreshToken);
         return response;
     }
 
@@ -54,18 +58,57 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        String token = generateTokenForUser(user);
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
+        String token = jwtService.generateToken(userDetails, user.getId());
+        String refreshToken = jwtService.generateRefreshToken(userDetails, user.getId());
+
         AuthResponse response = userMapper.toAuthResponse(user);
         response.setToken(token);
+        response.setRefreshToken(refreshToken);
         return response;
     }
 
-    /**
-     * Loads the UserDetails for the user and generates a signed JWT.
-     * Kept private to avoid code duplication between register and login.
-     */
-    private String generateTokenForUser(User user) {
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
-        return jwtService.generateToken(userDetails, user.getId());
+    @Override
+    @Transactional(readOnly = true)
+    public AuthResponse refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new InvalidCredentialsException("Refresh token is required");
+        }
+
+        try {
+            if (!jwtService.isRefreshToken(refreshToken)) {
+                throw new InvalidCredentialsException("Invalid token type. Expected a refresh token.");
+            }
+
+            final String email = jwtService.extractEmail(refreshToken);
+            if (email == null) {
+                throw new InvalidCredentialsException("Invalid refresh token payload");
+            }
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new InvalidCredentialsException("User associated with this token not found"));
+
+            if (user.getStatus() != com.delicious.domain.user.enums.UserStatus.ACTIVE) {
+                throw new InvalidCredentialsException("User account is inactive or banned");
+            }
+
+            UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+            if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+                throw new InvalidCredentialsException("Refresh token is expired or invalid");
+            }
+
+            // Issue a fresh access token and rotated refresh token
+            String newAccessToken = jwtService.generateToken(userDetails, user.getId());
+            String newRefreshToken = jwtService.generateRefreshToken(userDetails, user.getId());
+
+            AuthResponse response = userMapper.toAuthResponse(user);
+            response.setToken(newAccessToken);
+            response.setRefreshToken(newRefreshToken);
+            return response;
+        } catch (InvalidCredentialsException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new InvalidCredentialsException("Invalid or expired refresh token: " + e.getMessage());
+        }
     }
 }
