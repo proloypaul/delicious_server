@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/deliciousdb
     username: postgres
-    password: utsha
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -20,6 +20,14 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 1000ms
+      connect-timeout: 1000ms
+
 server:
   port: 9080
 
@@ -34,4 +42,15 @@ cors:
 
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1kZWxpY2lvdXMtYXBwLXRoYXQtaXMtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZw==}
-  expiration-ms: 86400000   # 24 hours in milliseconds
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}             # 15 minutes
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+
+cookie:
+  secure: false
+  same-site: Lax
+  domain: ""
+
+rate-limit:
+  login:
+    max-attempts: ${LOGIN_RATE_LIMIT_ATTEMPTS:3}
+    window-seconds: ${LOGIN_RATE_LIMIT_WINDOW:120}

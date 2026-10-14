@@ -26,29 +26,43 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${jwt.expiration-ms:900000}")
     private long expirationMs;
 
+    @Value("${jwt.refresh-expiration-ms:604800000}")
+    private long refreshExpirationMs;
+
     /**
-     * Generate a signed JWT token for the given UserDetails.
-     * Stores userId as an extra claim for downstream use.
+     * Generate a signed JWT access token for the given UserDetails.
+     * Stores userId, role, and tokenType as extra claims.
      */
     public String generateToken(UserDetails userDetails, Long userId) {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", userId);
-        // Store the first authority (role) — e.g. "ROLE_CUSTOMER"
+        extraClaims.put("tokenType", "ACCESS");
         if (!userDetails.getAuthorities().isEmpty()) {
             extraClaims.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
         }
-        return buildToken(extraClaims, userDetails);
+        return buildToken(extraClaims, userDetails, expirationMs);
     }
 
-    private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+    /**
+     * Generate a signed JWT refresh token for the given UserDetails.
+     * Stores userId and tokenType="REFRESH".
+     */
+    public String generateRefreshToken(UserDetails userDetails, Long userId) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", userId);
+        extraClaims.put("tokenType", "REFRESH");
+        return buildToken(extraClaims, userDetails, refreshExpirationMs);
+    }
+
+    private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expirationDurationMs) {
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())  // email
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .expiration(new Date(System.currentTimeMillis() + expirationDurationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -59,7 +73,31 @@ public class JwtService {
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return email != null && email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    /**
+     * Extract token type claim ("ACCESS" or "REFRESH").
+     */
+    public String extractTokenType(String token) {
+        return extractClaim(token, claims -> claims.get("tokenType", String.class));
+    }
+
+    /**
+     * Checks if the token is marked as an ACCESS token.
+     * Tokens without explicit tokenType claim default to ACCESS for backward compatibility.
+     */
+    public boolean isAccessToken(String token) {
+        String type = extractTokenType(token);
+        return type == null || "ACCESS".equalsIgnoreCase(type);
+    }
+
+    /**
+     * Checks if the token is specifically a REFRESH token.
+     */
+    public boolean isRefreshToken(String token) {
+        String type = extractTokenType(token);
+        return "REFRESH".equalsIgnoreCase(type);
     }
 
     /** Extract the email (subject) from the JWT. */

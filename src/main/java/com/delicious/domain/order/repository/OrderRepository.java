@@ -1,5 +1,6 @@
 package com.delicious.domain.order.repository;
 
+import com.delicious.domain.admin.dto.AdminOrderStatsProjection;
 import com.delicious.domain.order.entity.Order;
 import com.delicious.domain.order.enums.OrderStatus;
 import jakarta.persistence.LockModeType;
@@ -55,4 +56,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.orderStatus = :status")
     BigDecimal sumTotalAmountByStatus(@Param("status") OrderStatus status);
+
+    /**
+     * Returns total orders, pending orders, delivered orders and total revenue in a
+     * SINGLE database round-trip using conditional aggregation.
+     * Replaces four separate count/sum calls in AdminServiceImpl.
+     */
+    @Query("""
+            SELECT
+                COUNT(o)                                                                      AS totalOrders,
+                SUM(CASE WHEN o.orderStatus = com.delicious.domain.order.enums.OrderStatus.PENDING   THEN 1 ELSE 0 END) AS pendingOrders,
+                SUM(CASE WHEN o.orderStatus = com.delicious.domain.order.enums.OrderStatus.DELIVERED THEN 1 ELSE 0 END) AS deliveredOrders,
+                COALESCE(SUM(CASE WHEN o.orderStatus = com.delicious.domain.order.enums.OrderStatus.DELIVERED THEN o.totalAmount ELSE 0 END), 0) AS totalRevenue
+            FROM Order o
+            """)
+    AdminOrderStatsProjection getOrderStats();
 }

@@ -7,4 +7,5 @@ import com.delicious.domain.user.dto.RegisterRequest;
 public interface AuthService {
     AuthResponse registerUser(RegisterRequest request);
     AuthResponse loginUser(LoginRequest request);
+    AuthResponse refreshToken(String refreshToken);
 }

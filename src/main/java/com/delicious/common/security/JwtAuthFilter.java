@@ -36,6 +36,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final CookieService cookieService;
 
     @Override
     protected void doFilterInternal(
@@ -46,16 +47,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // If no Bearer token, skip authentication — let the filter chain continue
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        String jwt = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7); // Strip "Bearer " prefix
+        } else {
+            // Check cookie if Authorization header is not present
+            jwt = cookieService.extractCookie(request, CookieService.ACCESS_TOKEN_COOKIE_NAME, "accessToken")
+                    .orElse(null);
+        }
+
+        // If no token found, skip authentication — let the filter chain continue
+        if (jwt == null || jwt.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7); // Strip "Bearer " prefix
-
         try {
-            final String email = jwtService.extractEmail(jwt);
+            // Ensure this is an access token, not a refresh token
+            if (jwtService.isAccessToken(jwt)) {
+                final String email = jwtService.extractEmail(jwt);
 
             // Only authenticate if not already authenticated in this request
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -74,7 +84,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     log.debug("JWT authentication successful for user: {}", email);
                 }
             }
-        } catch (Exception e) {
+        }
+    } catch (Exception e) {
             // Log at debug level — invalid tokens are a normal occurrence (expired, tampered, etc.)
             log.debug("JWT validation failed: {}", e.getMessage());
         }
