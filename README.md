@@ -2,12 +2,15 @@
 
 # 🍔 Delicious Server
 
-**A robust, production-ready RESTful backend API for a modern food delivery platform**
+**High-Performance, Scalable, Production-Ready Food Delivery REST API & Microservice Backend**
 
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk)](https://openjdk.org/projects/jdk/17/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.1-brightgreen?style=flat-square&logo=spring)](https://spring.io/projects/spring-boot)
+[![Spring Security](https://img.shields.io/badge/Spring%20Security-JWT%20%2B%20HttpOnly%20Cookies-green?style=flat-square&logo=springsecurity)](https://spring.io/projects/spring-security)
+[![Redis](https://img.shields.io/badge/Redis-7.x%20Lettuce%20Distributed%20Cache%20%26%20RateLimit-red?style=flat-square&logo=redis)](https://redis.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-blue?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
-[![Flyway](https://img.shields.io/badge/Flyway-migrations-red?style=flat-square&logo=flyway)](https://flywaydb.org/)
+[![Flyway](https://img.shields.io/badge/Flyway-Migrations%20(V1--V3)-critical?style=flat-square&logo=flyway)](https://flywaydb.org/)
+[![Swagger](https://img.shields.io/badge/OpenAPI%203-Swagger%20UI-brightgreen?style=flat-square&logo=swagger)](http://localhost:9080/swagger-ui.html)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 </div>
@@ -16,145 +19,197 @@
 
 ## 📑 Table of Contents
 
-- [Overview](#-overview)
-- [Features](#-features)
+- [Overview & Architecture](#-overview--architecture)
+  - [System Architecture Diagram](#system-architecture-diagram)
+  - [Scalability & Million-User Readiness](#scalability--million-user-readiness)
+- [Key Features](#-key-features)
 - [Technology Stack](#-technology-stack)
-- [Project Structure](#-project-structure)
+- [Security, Authentication & Cookies](#-security-authentication--cookies)
+  - [Dual-Token Flow (Access + Refresh Token)](#dual-token-flow-access--refresh-token)
+  - [Environment-Specific Cookie Security](#environment-specific-cookie-security)
+  - [Distributed Login Rate Limiter](#distributed-login-rate-limiter)
+- [Project Directory Structure](#-project-directory-structure)
 - [Getting Started](#-getting-started)
   - [Prerequisites](#prerequisites)
-  - [Configuration](#configuration)
-  - [Running the Application](#running-the-application)
+  - [Running Redis with Docker Compose](#running-redis-with-docker-compose)
+  - [Configuration & Environment Profiles](#configuration--environment-profiles)
+  - [Running the Server](#running-the-server)
 - [API Reference](#-api-reference)
-  - [Authentication](#authentication-apiv1auth)
-  - [Users](#users-apiv1users)
-  - [Customers](#customers-apiv1customers)
-  - [Sellers](#sellers-apiv1sellers)
-  - [Riders](#riders-apiv1riders)
-  - [Products](#products-apiv1products)
-  - [Categories](#categories-apiv1categories)
-  - [Orders](#orders-apiv1orders)
-  - [Reviews](#reviews-apiv1reviews)
-  - [Admin](#admin-apiv1admin)
-  - [Actuator](#actuator-actuator)
-- [Data Models](#-data-models)
-- [Database Migrations](#-database-migrations)
-- [Seed Data](#-seed-data)
-- [Error Handling](#-error-handling)
-- [Running Tests](#-running-tests)
+  - [Response Envelope Standard](#response-envelope-standard)
+  - [1. Authentication & Session (`/api/v1/auth`)](#1-authentication--session-apiv1auth)
+  - [2. User Management (`/api/v1/users`)](#2-user-management-apiv1users)
+  - [3. Customer Operations (`/api/v1/customers`)](#3-customer-operations-apiv1customers)
+  - [4. Seller Operations (`/api/v1/sellers`)](#4-seller-operations-apiv1sellers)
+  - [5. Rider Dispatch & Delivery (`/api/v1/riders`)](#5-rider-dispatch--delivery-apiv1riders)
+  - [6. Products & Menu Management (`/api/v1/products`)](#6-products--menu-management-apiv1products)
+  - [7. Cuisine Categories (`/api/v1/categories`)](#7-cuisine-categories-apiv1categories)
+  - [8. Orders & Processing Flow (`/api/v1/orders`)](#8-orders--processing-flow-apiv1orders)
+  - [9. Reviews & Customer Feedback (`/api/v1/reviews`)](#9-reviews--customer-feedback-apiv1reviews)
+  - [10. Promo Coupons Management (`/api/v1/coupons`)](#10-promo-coupons-management-apiv1coupons)
+  - [11. Admin Intelligence & Metrics (`/api/v1/admin`)](#11-admin-intelligence--metrics-apiv1admin)
+  - [12. Actuator & Observability (`/actuator`)](#12-actuator--observability-actuator)
+- [Database Schema & Migrations](#-database-schema--migrations)
+- [Default Seed Data](#-default-seed-data)
+- [Global Error Handling](#-global-error-handling)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
 
 ---
 
-## 🌟 Overview
+## 🌟 Overview & Architecture
 
-**Delicious Server** is the backend engine powering a full-stack food delivery application. It exposes a comprehensive REST API catering to four distinct user roles: **Customers**, **Sellers**, **Riders**, and **Admins**. The platform manages the entire lifecycle of a food order — from browsing menus and placing orders, to delivery and review.
+**Delicious Server** is the enterprise-grade backend powering the **Delicious** food delivery platform. Designed using **Domain-Driven Design (DDD)** and **Clean Layered Architecture**, it delivers a sub-millisecond, highly secure, and resilient experience supporting four core business personas:
+- 🍽️ **Customers**: Browse menus, filter dishes, redeem promo codes, place real-time orders, track delivery stages, and post customer reviews.
+- 🏪 **Sellers / Kitchens**: Manage multi-category product catalogs, toggle kitchen item stock, and monitor orders.
+- 🛵 **Riders**: Claim ready orders, track pick-ups and drops, and advance order state machine.
+- 🛡️ **Admins**: Platform-wide controls, role analytics, coupon creation, and single-pass aggregations.
+
+### System Architecture Diagram
+
+```
+[ Next.js 15 Frontend / Mobile App ]
+                 │ (HTTPS + Credentials / HttpOnly Cookies)
+                 ▼
+       [ Nginx / Reverse Proxy ]
+                 │ (Forwarding Real Client IPs)
+                 ▼
+     [ Delicious Server (Spring Boot 3.4) ]
+     ├── RateLimiterService ──► [ Redis 7 Cache & Atomic Keys ] (Fail-safe Fallback)
+     ├── JwtAuthFilter (HttpOnly Access & Refresh Token verification)
+     ├── SecurityFilterChain (Stateless RBAC: ADMIN, SELLER, RIDER, CUSTOMER)
+     ├── Spring MVC Domain Controllers (Paginated, Validated)
+     └── Spring Data JPA (Hibernate 6)
+                 │
+                 ▼ (Connection Pool HikariCP + Indexes)
+         [ PostgreSQL 16+ ]
+```
+
+### Scalability & Million-User Readiness
+1. **Resilient Non-Blocking Redis Layer:**
+   - Dedicated `RedisConfig` with Lettuce client timeouts (`1500ms` command, `1000ms` connect).
+   - Eager connection validation is turned off (`validateConnection(false)`). If Redis is temporarily stopped or unavailable, the server **never crashes**; it logs an informative warning and seamlessly defaults to an in-memory concurrent sliding-window rate limiter.
+2. **Elimination of N+1 Queries & Unoptimized Counts:**
+   - Admin stats aggregation (`AdminServiceImpl`) uses SQL conditional aggregation (`CASE WHEN`) and DB-level projections (`AdminUserCountProjection`, `AdminOrderStatsProjection`), replacing 8 separate count queries with single-pass executions.
+3. **Optimized Database Schema & Composite Indexes (Flyway `V1` – `V3`):**
+   - High-cardinality indexing on `user_id`, `seller_id`, `category_id`, `order_status`, `created_at`, and `code`.
+4. **Stateless Scale-Out:**
+   - Stateless JWT tokens stored in HttpOnly cookies enable horizontal auto-scaling across multiple container instances without sticky sessions.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-| Feature | Description |
+| Feature | Production Architecture & Details |
 |---|---|
-| 🔐 **Authentication** | User registration & login with BCrypt password hashing |
-| 👤 **Multi-Role Users** | Distinct roles: `CUSTOMER`, `SELLER`, `RIDER`, `ADMIN` |
-| 🏪 **Seller Management** | Seller registration, profile management, and product listing |
-| 🛵 **Rider Management** | Rider onboarding, order assignment, and delivery status updates |
-| 🛒 **Order Lifecycle** | Full order flow: `PENDING → PROCESSING → ACCEPTED_BY_RIDER → PICKED_UP → DELIVERED` |
-| 🍕 **Product Catalogue** | Create, update, delete products with category filtering and pagination |
-| 📦 **Category Management** | Full CRUD for product categories with duplicate name protection |
-| ⭐ **Product Reviews** | Customers can submit and view product reviews with ratings |
-| 📊 **Admin Dashboard** | Platform-wide statistics and metrics |
-| 🛡️ **Error Handling** | Structured, client-safe error responses — no internal detail leakage |
-| 📄 **Pagination** | All list endpoints support Spring Data `Pageable` with configurable page sizes |
-| 🏥 **Health Checks** | Spring Actuator `/health` and `/metrics` endpoints for production monitoring |
-| 🗄️ **DB Migrations** | Flyway for safe, versioned schema evolution |
-| 📖 **API Documentation** | Interactive Swagger UI via SpringDoc OpenAPI |
+| 🔐 **Stateless Dual-Token Auth** | Short-lived Access Token (15 min) + Long-lived Refresh Token (7 days) with automated server-side rotation |
+| 🍪 **HttpOnly Cookie Protection** | Cookie injection on backend (`SameSite`, `HttpOnly`, `Path=/`, HTTPS in Prod); immunity against XSS script extraction |
+| ⏱️ **Distributed Rate Limiting** | Strict IP-based login limit (3 attempts per 2 min) using Redis atomic keys + HTTP `429 Too Many Requests` + `Retry-After` header |
+| 🛡️ **Role-Based Security (RBAC)** | Declarative `@PreAuthorize("hasRole('ADMIN')")`, `@PreAuthorize("hasAnyRole(...)")` across all endpoints |
+| 🎟️ **Promo Coupons Engine** | Promo code validation, minimum order criteria, discount deductions, and admin coupon generation |
+| ⭐ **Customer Reviews & Ratings** | Batch-enriched reviews with Spring Data pagination (`Page<ReviewResponse>`) and star rating breakdowns |
+| 🚚 **Order State Machine** | Strict state lifecycle: `PENDING → PROCESSING → ACCEPTED_BY_RIDER → PICKED_UP → DELIVERED` |
+| 📊 **Admin Dashboard Intelligence**| Single-query consolidated stats for users, orders, revenue, and product counts |
+| 📄 **Universal Pagination** | All listing endpoints enforce Pageable contracts (`content`, `pageable`, `totalElements`, `totalPages`) |
+| 🏥 **Full Observability** | Spring Actuator health probes and Prometheus-compatible metrics |
 
 ---
 
 ## 🛠 Technology Stack
 
-| Category | Technology |
-|---|---|
-| **Language** | Java 17 |
-| **Framework** | Spring Boot 3.4.1 |
-| **Security** | Spring Security with BCrypt |
-| **Persistence** | Spring Data JPA + Hibernate 6 |
-| **Database** | PostgreSQL 16+ |
-| **DB Migration** | Flyway |
-| **Build Tool** | Apache Maven |
-| **API Docs** | SpringDoc OpenAPI 2.7 (Swagger UI) |
-| **Monitoring** | Spring Boot Actuator |
-| **Utilities** | Lombok |
+| Component | Technology | Version | Purpose |
+|---|---|---|---|
+| **Language** | Java | 17 (LTS) | Modern OOP features, records, pattern matching |
+| **Framework** | Spring Boot | 3.4.1 | Core application framework & dependency injection |
+| **Security** | Spring Security | 6.4.x | Stateless security filter chains and RBAC |
+| **JWT** | JJWT (`jjwt-api`, `jjwt-impl`, `jjwt-jackson`) | 0.12.6 | Cryptographic signing & parsing of HMAC-SHA512 tokens |
+| **Caching & In-Memory**| Spring Data Redis + Lettuce | 3.4.1 | Distributed counters, distributed caching, fail-safe fallback |
+| **Database** | PostgreSQL | 16+ | Primary relational transactional database |
+| **ORM / Persistence** | Spring Data JPA / Hibernate | 6.x | Entity mapping, JPA specifications, Criteria queries |
+| **Schema Migration** | Flyway Core + Flyway PostgreSQL | 10.x | Deterministic, audited DB versioning (`V1`, `V2`, `V3`) |
+| **API Documentation** | SpringDoc OpenAPI | 2.7.0 | Swagger UI and OpenAPI 3 schema generation |
+| **Productivity** | Lombok | 1.18.x | Boilerplate removal (`@Getter`, `@RequiredArgsConstructor`) |
+| **Monitoring** | Spring Boot Actuator | 3.4.1 | Production readiness, liveness and readiness health checks |
 
 ---
 
-## 📁 Project Structure
+## 🔒 Security, Authentication & Cookies
+
+### Dual-Token Flow (Access + Refresh Token)
+
+```
+[ Client ]                             [ Delicious Server ]
+    │                                          │
+    │ ─── 1. POST /api/v1/auth/login ────────► │ Check Rate Limit (IP)
+    │                                          │ Verify BCrypt Password
+    │ ◄── 2. 200 OK + Set-Cookie (Access+Ref)─ │ Return AuthResponse
+    │                                          │
+    │ ─── 3. Authenticated Request (Cookie) ──► │ JwtAuthFilter validates Access Token
+    │ ◄── 4. Protected Data ────────────────── │ If Expired: 401 Unauthorized
+    │                                          │
+    │ ─── 5. POST /api/v1/auth/refresh ───────► │ Validates Refresh Token (Cookie/Body)
+    │ ◄── 6. 200 OK + Fresh Set-Cookie ─────── │ Issues New Access & Refresh Tokens
+```
+
+### Environment-Specific Cookie Security
+
+Configured dynamically through [CookieService.java](file:///run/media/utsha/New%20Volume1/varsityAssignment/varsityProject/delicious_server/src/main/java/com/delicious/common/security/CookieService.java):
+
+| Profile | `cookie.secure` | `cookie.same-site` | `cookie.domain` | HttpOnly | Description |
+|---|---|---|---|---|---|
+| **dev** | `false` | `Lax` | `""` (host only) | `true` | Allows local development across ports (e.g., frontend 3000 -> backend 9080) |
+| **prod** | `true` | `None` / `Strict` | Environment-specific | `true` | Enforces HTTPS transmission; inaccessible to JavaScript `document.cookie` |
+
+### Distributed Login Rate Limiter
+
+Configured in [RateLimiterService.java](file:///run/media/utsha/New%20Volume1/varsityAssignment/varsityProject/delicious_server/src/main/java/com/delicious/common/security/RateLimiterService.java):
+- **Rule**: Maximum **3 attempts** within **120 seconds** (2 minutes) per client IP.
+- **Client IP Resolution**: Resolves original client IPs through `CF-Connecting-IP`, `X-Forwarded-For`, and `X-Real-IP`.
+- **Redis Strategy**: Atomic Redis `INCR` key with sliding `EXPIRE` window: `rate_limit:login:ip:{clientIp}`.
+- **Fail-Safe In-Memory Fallback**: If Redis connectivity fails, the service catches the error and switches to an in-memory `ConcurrentHashMap` with TTL verification, preventing denial of service to your authentication cluster.
+- **Response On Violation**:
+  - HTTP Status: `429 Too Many Requests`
+  - Header: `Retry-After: <remaining-seconds>`
+  - Message: *"Too many login attempts. You have exceeded the limit of 3 attempts in 2 minutes. Please wait 1 minute 45 seconds before trying again."*
+- **Auto-Reset**: Successfully logging in immediately clears the counter for that IP.
+
+---
+
+## 📁 Project Directory Structure
 
 ```
 delicious_server/
-│
-├── src/main/
-│   ├── java/com/delicious/
-│   │   │
-│   │   ├── DeliciousServerApplication.java       # Application entry point
-│   │   │
-│   │   ├── common/                               # Shared, cross-cutting components
-│   │   │   ├── config/
-│   │   │   │   ├── DataInitializer.java          # Dev seed data runner
-│   │   │   │   ├── JpaConfig.java                # JPA auditing configuration
-│   │   │   │   └── SwaggerConfig.java            # OpenAPI/Swagger configuration
-│   │   │   ├── entity/
-│   │   │   │   └── BaseEntity.java               # Shared auditing fields (createdAt, updatedAt)
-│   │   │   ├── exception/
-│   │   │   │   ├── GlobalExceptionHandler.java   # Centralized exception handling
-│   │   │   │   ├── ResourceNotFoundException.java
-│   │   │   │   └── ResourceAlreadyExistsException.java
-│   │   │   ├── response/
-│   │   │   │   └── ApiResponse.java              # Standardized API response wrapper
-│   │   │   └── security/
-│   │   │       ├── SecurityConfig.java           # Spring Security & CORS configuration
-│   │   │       └── CustomUserDetailsService.java
-│   │   │
-│   │   └── domain/                               # Feature modules (Domain-Driven Design)
-│   │       ├── admin/                            # Platform admin statistics
-│   │       ├── customer/                         # Customer profiles
-│   │       ├── order/                            # Order management
-│   │       ├── product/                          # Products & categories
-│   │       ├── review/                           # Product reviews
-│   │       ├── rider/                            # Rider profiles & delivery
-│   │       ├── seller/                           # Seller profiles
-│   │       └── user/                             # Auth & user management
-│   │           ├── controller/
-│   │           ├── dto/
-│   │           ├── entity/
-│   │           ├── enums/
-│   │           ├── exception/
-│   │           ├── mapper/
-│   │           ├── repository/
-│   │           └── service/
-│   │
-│   └── resources/
-│       ├── application.yml                       # Root config (sets active profile)
-│       ├── application-dev.yml                   # Development configuration
-│       ├── application-prod.yml                  # Production configuration (env vars)
-│       └── db/migration/
-│           └── V1__init.sql                      # Baseline Flyway migration
-│
-└── pom.xml
-```
-
-Each **domain module** follows a consistent layered structure:
-
-```
-domain/<feature>/
-├── controller/    # REST endpoints
-├── dto/           # Request & Response objects
-├── entity/        # JPA entities
-├── enums/         # Domain-specific enumerations
-├── exception/     # Domain-specific exceptions
-├── mapper/        # Entity <-> DTO conversion
-├── repository/    # Spring Data JPA repositories
-└── service/       # Business logic (Interface + Implementation)
+├── redis-compose.yaml                        # Standalone Docker compose for Redis 7 Alpine
+├── pom.xml                                   # Project Maven build manifest & dependencies
+└── src/main/
+    ├── java/com/delicious/
+    │   ├── DeliciousServerApplication.java   # Main Spring Boot Application Bootstrap
+    │   ├── common/                           # Cross-cutting enterprise infrastructure
+    │   │   ├── config/                       # Spring Beans: RedisConfig, SwaggerConfig, JpaConfig, DataInitializer
+    │   │   ├── constants/                    # Global constants
+    │   │   ├── entity/                       # BaseEntity (createdAt, updatedAt @MappedSuperclass)
+    │   │   ├── exception/                    # GlobalExceptionHandler, RateLimitExceededException, ResourceNotFoundException
+    │   │   ├── response/                     # Standard ApiResponse<T> envelope wrapper
+    │   │   ├── security/                     # SecurityConfig, JwtService, JwtAuthFilter, CookieService, RateLimiterService
+    │   │   └── util/                         # Helper utilities
+    │   │
+    │   └── domain/                           # DDD Modular Subsystems
+    │       ├── admin/                        # Admin metrics, aggregated projections & controller
+    │       ├── coupon/                       # Promo coupon entity, repository, validation service & admin controller
+    │       ├── customer/                     # Customer profile entities, repository, and controller
+    │       ├── order/                        # Order state machine, OrderItems, checkout & tracking
+    │       ├── product/                      # Product catalog, multi-category mappings, search & approval status
+    │       ├── review/                       # Customer product reviews, ratings & batch-enriched queries
+    │       ├── rider/                        # Rider fleet onboarding, delivery assignment & updates
+    │       ├── seller/                       # Seller profile, kitchen details & store menu endpoints
+    │       └── user/                         # Core Auth, User repository, Login, Register, Refresh Token
+    │
+    └── resources/
+        ├── application.yml                   # Root profile selector (active: dev)
+        ├── application-dev.yml               # Dev profile (Postgres localhost, Redis 6379, Lax cookies)
+        ├── application-prod.yml              # Production profile (Environment variable bindings)
+        └── db/migration/
+            ├── V1__init.sql                  # Initial baseline tables
+            ├── V2__add_indexes_and_constraints.sql  # High-throughput foreign keys & query indexes
+            └── V3__add_coupons_table.sql     # Promo coupon schema & indexing
 ```
 
 ---
@@ -163,63 +218,67 @@ domain/<feature>/
 
 ### Prerequisites
 
-- **JDK 17** or higher
+- **Java JDK 17** or higher
 - **Apache Maven 3.8+**
-- **PostgreSQL 16+** running locally
+- **PostgreSQL 16+**
+- **Docker & Docker Compose** (for Redis)
 
-### Configuration
+### Running Redis with Docker Compose
 
-**1. Create the database:**
-```sql
-CREATE DATABASE deliciousdb;
-```
-
-**2. Configure credentials** in `src/main/resources/application-dev.yml`:
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/deliciousdb
-    username: your_username
-    password: your_password
-```
-
-**For Production**, environment variables are used instead of hardcoded credentials:
-
-| Variable | Description | Default |
-|---|---|---|
-| `DB_URL` | Full JDBC connection URL | `jdbc:postgresql://localhost:5432/deliciousdb` |
-| `DB_USERNAME` | Database user | `postgres` |
-| `DB_PASSWORD` | Database password | — |
-| `PORT` | Server port | `9080` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000` |
-
-### Running the Application
+A dedicated `redis-compose.yaml` is provided:
 
 ```bash
-# Clone the repository
-git clone https://github.com/proloypaul/delicious_server.git
-cd delicious_server
+# Start Redis in the background
+docker compose -f redis-compose.yaml up -d
 
-# Run in development mode (uses application-dev.yml)
+# Verify Redis is running
+docker compose -f redis-compose.yaml ps
+```
+
+### Configuration & Environment Profiles
+
+#### Development (`application-dev.yml`)
+- PostgreSQL default: `jdbc:postgresql://localhost:5432/deliciousdb`
+- Redis default: `localhost:6379`
+- Server port: `9080`
+
+#### Production Environment Variables (`application-prod.yml`)
+| Variable | Description | Example |
+|---|---|---|
+| `DB_URL` | PostgreSQL JDBC connection URL | `jdbc:postgresql://db.prod:5432/deliciousdb` |
+| `DB_USERNAME` | Database username | `postgres_prod` |
+| `DB_PASSWORD` | Database password | `StrongSecretPassword` |
+| `REDIS_HOST` | Redis host or cluster endpoint | `redis-cluster.internal` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `REDIS_PASSWORD` | Redis authentication password | `RedisSecretPassword` |
+| `JWT_SECRET` | 512-bit Base64-encoded secret key | *(generate via `openssl rand -base64 64`)* |
+| `COOKIE_SECURE` | Set `true` for HTTPS in production | `true` |
+| `COOKIE_SAME_SITE` | SameSite cookie policy | `None` (cross-domain) or `Lax` |
+| `ALLOWED_ORIGINS`| CORS allowed frontend origins | `https://delicious.yourdomain.com` |
+
+### Running the Server
+
+```bash
+# 1. Compile and package the application
+mvn clean package -DskipTests
+
+# 2. Run in Development profile
 mvn spring-boot:run
 
-# Or build and run the JAR
-mvn clean package -DskipTests
-java -jar target/delicious-server-0.0.1-SNAPSHOT.jar
-
-# Switch to production profile
+# 3. Or launch with Production profile
 java -jar target/delicious-server-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
-The server will start on **`http://localhost:9080`**.
-
-📖 **Swagger UI** is available at: [`http://localhost:9080/swagger-ui.html`](http://localhost:9080/swagger-ui.html)
+Interactive OpenAPI Swagger UI: [`http://localhost:9080/swagger-ui.html`](http://localhost:9080/swagger-ui.html)  
+Health Check: [`http://localhost:9080/actuator/health`](http://localhost:9080/actuator/health)
 
 ---
 
 ## 📡 API Reference
 
-All endpoints are prefixed with `/api/v1`. All responses follow a standard wrapper format:
+### Response Envelope Standard
+
+Every API response follows a consistent wrapper format:
 
 ```json
 {
@@ -231,95 +290,87 @@ All endpoints are prefixed with `/api/v1`. All responses follow a standard wrapp
 
 ---
 
-### Authentication `/api/v1/auth`
+### 1. Authentication & Session (`/api/v1/auth`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/register` | Register a new user account |
-| `POST` | `/login` | Authenticate and get user details |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/register` | Public | Register customer account, hash password, sets auth cookies |
+| `POST` | `/login` | Public (Rate-Limited) | Authenticates user; enforces 3 attempts/2 min limit; sets `access_token` & `refresh_token` cookies |
+| `POST` | `/refresh-token` | Public | Rotates tokens using HttpOnly refresh cookie or body payload |
+| `POST` | `/logout` | Authenticated | Clears `access_token`, `refresh_token`, and `user_role` cookies |
 
-**Register Request Body:**
+#### Login Request Body
 ```json
 {
-  "name": "John Doe",
-  "email": "john@example.com",
-  "phone": "01234567890",
-  "password": "securePassword",
-  "role": "CUSTOMER"
-}
-```
-
-**Login Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "securePassword"
+  "email": "customer@delicious.com",
+  "password": "securePassword123"
 }
 ```
 
 ---
 
-### Users `/api/v1/users`
+### 2. User Management (`/api/v1/users`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | Get paginated list of all users |
-| `GET` | `/{id}` | Get a specific user by ID |
-| `PATCH` | `/{id}/status` | Update user active/inactive status |
-
----
-
-### Customers `/api/v1/customers`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/profile?userId={id}` | Get a customer's profile |
-| `PUT` | `/profile?userId={id}` | Update customer name, phone, or address |
-| `GET` | `/` | Get all customers (paginated) |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/` | Admin | Get paginated list of all registered users (`?page=0&size=20`) |
+| `GET` | `/{id}` | Admin / User | Get specific user by primary ID |
+| `PATCH` | `/{id}/status` | Admin | Update user status (`ACTIVE`, `INACTIVE`, `BANNED`) |
 
 ---
 
-### Sellers `/api/v1/sellers`
+### 3. Customer Operations (`/api/v1/customers`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/register` | Register as a new seller |
-| `GET` | `/profile?userId={id}` | Get a seller's profile |
-| `PUT` | `/profile?userId={id}` | Update seller profile and store details |
-| `GET` | `/products?userId={id}` | Get all products belonging to a seller |
-| `GET` | `/` | Get all registered sellers (paginated) |
-
----
-
-### Riders `/api/v1/riders`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/` | Register a new rider |
-| `GET` | `/` | Get all riders (paginated) |
-| `GET` | `/{id}` | Get a rider's profile by ID |
-| `GET` | `/orders/{riderId}` | Get all orders assigned to a rider |
-| `PUT` | `/status/{orderId}?riderId={id}` | Update the delivery status of an order |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/register` | Public | Register customer profile |
+| `GET` | `/profile?userId={id}` | Authenticated | Fetch customer profile data & address |
+| `PUT` | `/profile?userId={id}` | Authenticated | Update name, phone, delivery address |
+| `GET` | `/` | Admin | Paginated list of all customer records |
 
 ---
 
-### Products `/api/v1/products`
+### 4. Seller Operations (`/api/v1/sellers`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/` | Create a new product listing |
-| `GET` | `/?categoryName={name}` | Get all products, optionally filtered by category (paginated) |
-| `GET` | `/{id}` | Get a specific product by ID |
-| `PUT` | `/{id}` | Update a product |
-| `DELETE` | `/{id}` | Delete a product |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/register` | Public | Onboard new seller kitchen with `storeName` |
+| `GET` | `/profile?userId={id}` | Authenticated | Get seller profile, store details, and status |
+| `PUT` | `/profile?userId={id}` | Seller / Admin | Update seller details |
+| `GET` | `/products?userId={id}` | Public | List all dishes prepared by a specific seller |
+| `GET` | `/` | Admin | Get paginated directory of registered sellers |
 
-**Product Request Body:**
+---
+
+### 5. Rider Dispatch & Delivery (`/api/v1/riders`)
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/` or `/register` | Public | Onboard rider with `vehicleType` and `vehicleRegistrationNumber` |
+| `GET` | `/` | Admin | List all riders (paginated) |
+| `GET` | `/{id}` | Authenticated | Get rider profile details |
+| `GET` | `/orders/{riderId}` | Rider / Admin | Get list of assigned delivery orders |
+| `PUT` | `/status/{orderId}?riderId={id}`| Rider / Admin | Update delivery stage (`ACCEPTED_BY_RIDER`, `PICKED_UP`, `DELIVERED`) |
+
+---
+
+### 6. Products & Menu Management (`/api/v1/products`)
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/` | Public | Paginated product list with optional category filter (`?categoryName=Burger&page=0&size=10`) |
+| `GET` | `/{id}` | Public | Detailed view of a single product |
+| `POST` | `/` | Seller / Admin | Add new food item to kitchen menu |
+| `PUT` | `/{id}` | Seller / Admin | Update price, preparation time, description, or status |
+| `DELETE` | `/{id}` | Seller / Admin | Delete product from catalog |
+
+#### Create Product Payload
 ```json
 {
-  "foodName": "Double Cheese Burger",
-  "description": "Delicious double cheese burger",
-  "price": 5.99,
-  "makingTime": 15,
+  "foodName": "Truffle Beef Burger",
+  "description": "Double beef patty with truffle mayo and aged cheddar",
+  "price": 12.99,
+  "makingTime": 20,
   "status": "APPROVED",
   "sellerId": 2,
   "categoryId": 1
@@ -328,222 +379,164 @@ All endpoints are prefixed with `/api/v1`. All responses follow a standard wrapp
 
 ---
 
-### Categories `/api/v1/categories`
+### 7. Cuisine Categories (`/api/v1/categories`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/` | Create a new category |
-| `GET` | `/` | Get all categories (paginated, sorted by name) |
-| `GET` | `/{id}` | Get a specific category by ID |
-| `PUT` | `/{id}` | Update a category |
-| `DELETE` | `/{id}` | Delete a category |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/` | Public | List all cuisine categories (paginated, ordered by name) |
+| `GET` | `/{id}` | Public | Get single category |
+| `POST` | `/` | Admin | Create category with duplicate name check |
+| `PUT` | `/{id}` | Admin | Update category name and image |
+| `DELETE` | `/{id}` | Admin | Remove category |
 
 ---
 
-### Orders `/api/v1/orders`
+### 8. Orders & Processing Flow (`/api/v1/orders`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/?customerId={id}` | Place a new order |
-| `GET` | `/{id}` | Get a specific order by ID |
-| `GET` | `/customer?customerId={id}` | Get all orders for a specific customer |
-| `GET` | `/` | Get all orders (admin view, paginated) |
-| `PUT` | `/status` | Update the status of an order |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/?customerId={id}` | Customer | Place order with cart items, address, and coupon discount |
+| `GET` | `/{id}` | Authenticated | Inspect order details and order item breakdown |
+| `GET` | `/customer?customerId={id}` | Customer | View customer order history |
+| `GET` | `/` | Admin | View platform-wide orders (paginated) |
+| `PUT` | `/status` | Admin / Seller | Progress order state machine |
 
-**Order Status Flow:**
+#### Order Flow Lifecycle
 ```
-PENDING → PROCESSING → ACCEPTED_BY_RIDER → PICKED_UP → DELIVERED
-```
-
-**Order Request Body:**
-```json
-{
-  "phone": "01234567890",
-  "address": "123 Main Street, City",
-  "discount": 0.00,
-  "items": [
-    { "productId": 1, "quantity": 2 }
-  ]
-}
+PENDING ──► PROCESSING ──► ACCEPTED_BY_RIDER ──► PICKED_UP ──► DELIVERED
 ```
 
 ---
 
-### Reviews `/api/v1/reviews`
+### 9. Reviews & Customer Feedback (`/api/v1/reviews`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/` | Submit a review for a product |
-| `GET` | `/product/{id}` | Get all reviews for a product |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/` | Customer | Submit product review (Rating: 1 to 5) |
+| `GET` | `/product/{id}` | Public | Paginated reviews for a product (`?page=0&size=10&sort=createdAt,desc`) with batch-enriched customer names |
 
-**Review Request Body:**
+#### Review Submission Payload
 ```json
 {
-  "productId": 1,
+  "productId": 5,
   "customerId": 3,
   "rating": 5,
-  "message": "Absolutely delicious!"
+  "message": "Spectacular flavor, arrived hot and crispy!"
 }
 ```
 
 ---
 
-### Admin `/api/v1/admin`
+### 10. Promo Coupons Management (`/api/v1/coupons`)
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/validate` | Public | Validate promo code against current cart total (`?code=SAVE20&orderAmount=45.00`) |
+| `GET` | `/` | Admin | Paginated list of all promotional coupons (`?page=0&size=20`) |
+| `POST` | `/` | Admin | Create new coupon with discount amount & min order value |
+
+---
+
+### 11. Admin Intelligence & Metrics (`/api/v1/admin`)
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/dashboard/stats` | Admin | Consolidated dashboard metrics in 3 optimized queries (users by role, orders by status, total revenue, total products) |
+
+#### Sample Dashboard Stats Response
+```json
+{
+  "success": true,
+  "message": "Dashboard statistics retrieved successfully",
+  "data": {
+    "totalCustomers": 1240,
+    "totalSellers": 48,
+    "totalRiders": 85,
+    "totalProducts": 630,
+    "totalOrders": 8940,
+    "pendingOrders": 12,
+    "deliveredOrders": 8520,
+    "totalRevenue": 142580.50
+  }
+}
+```
+
+---
+
+### 12. Actuator & Observability (`/actuator`)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/dashboard/stats` | Get platform-wide statistics (users, orders, revenue) |
+| `GET` | `/actuator/health` | Comprehensive application health status including DB and Redis state |
+| `GET` | `/actuator/metrics` | JVM, thread pool, HikariCP, and HTTP request metrics |
 
 ---
 
-### Actuator `/actuator`
+## 🗄️ Database Schema & Migrations
 
-| Method | Endpoint | Description |
+Database evolution is managed via **Flyway** under `src/main/resources/db/migration/`:
+
+| Version | Script | Changes & Optimizations |
 |---|---|---|
-| `GET` | `/actuator/health` | Application health status (for load balancers & probes) |
-| `GET` | `/actuator/metrics` | Application performance metrics |
+| `V1` | `V1__init.sql` | Base schema: `users`, `customers`, `sellers`, `riders`, `categories`, `products`, `orders`, `order_items`, `reviews` |
+| `V2` | `V2__add_indexes_and_constraints.sql` | Added composite indexes (`idx_products_seller_id`, `idx_orders_status`, `idx_reviews_product_id`, etc.) and foreign key cascades |
+| `V3` | `V3__add_coupons_table.sql` | Created `coupons` table with unique uppercase code constraint and index on `code` |
 
 ---
 
-## 🗄️ Data Models
+## 🌱 Default Seed Data
 
-### User Roles
+On startup, `DataInitializer` seeds test accounts if they do not exist:
 
-| Role | Description |
-|---|---|
-| `CUSTOMER` | Can browse products, place orders, and leave reviews |
-| `SELLER` | Can manage their product catalogue |
-| `RIDER` | Can view and fulfill assigned deliveries |
-| `ADMIN` | Has platform-wide management access |
+| Persona | Email | Default Password | Role |
+|---|---|---|---|
+| **Admin** | `admin@example.com` | `password123` | `ADMIN` |
+| **Customer** | `john@example.com` | `password123` | `CUSTOMER` |
+| **Seller** | `alice@example.com` | `password123` | `SELLER` |
+| **Rider** | `rider@example.com` | `password123` | `RIDER` |
 
-### User Status
-
-| Status | Description |
-|---|---|
-| `ACTIVE` | User can log in and use the platform |
-| `INACTIVE` | Account created but not yet activated |
-| `BANNED` | Account is suspended |
-
-### Product Status
-
-| Status | Description |
-|---|---|
-| `PENDING` | Newly submitted product awaiting admin approval |
-| `APPROVED` | Product is live and visible to customers |
-
-### Order Status
-
-| Status | Description |
-|---|---|
-| `PENDING` | Order placed, awaiting seller processing |
-| `PROCESSING` | Seller is preparing the order |
-| `ACCEPTED_BY_RIDER` | A rider has accepted the delivery |
-| `PICKED_UP` | Rider has collected the order |
-| `DELIVERED` | Order successfully delivered |
+> ⚠️ **Important:** In production environments, replace default credentials and configure environment-supplied secrets immediately.
 
 ---
 
-## 🗃️ Database Migrations
+## 🚨 Global Error Handling
 
-This project uses **Flyway** for versioned database schema management.
-
-Migration scripts are located in `src/main/resources/db/migration/` and follow the naming convention: `V{version}__{description}.sql`.
-
-| Version | Script | Description |
-|---|---|---|
-| `V1` | `V1__init.sql` | Baseline schema — all tables, constraints, indexes |
-
-**Flyway is disabled in the `dev` profile by default** to allow Hibernate's `ddl-auto: validate` to manage schema during active development. To enable it:
-
-```yaml
-# application-dev.yml
-spring:
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-```
-
-**To add a new migration**, create a new file following the version convention:
-```
-src/main/resources/db/migration/V2__add_column_to_products.sql
-```
-
----
-
-## 🌱 Seed Data
-
-On application startup, `DataInitializer` automatically seeds the database with sample data if the records don't already exist (checks by email before inserting).
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@example.com` | `password123` |
-| Customer | `john@example.com` | `password123` |
-| Seller | `alice@example.com` | `password123` |
-| Rider | `rider@example.com` | `password123` |
-
-Additionally, a **"Fast Food"** category and a **"Double Cheese Burger"** product are seeded, linked to the Seller account.
-
-> ⚠️ **Change default passwords immediately in any non-development environment.**
-
----
-
-## 🚨 Error Handling
-
-All errors return a structured response to avoid leaking internal system details:
+All controller errors and edge cases are captured centrally in [GlobalExceptionHandler.java](file:///run/media/utsha/New%20Volume1/varsityAssignment/varsityProject/delicious_server/src/main/java/com/delicious/common/exception/GlobalExceptionHandler.java):
 
 ```json
 {
   "success": false,
-  "message": "Resource not found: Category not found with id: 99",
+  "message": "Too many login attempts. You have exceeded the limit of 3 attempts in 2 minutes. Please wait 1 minute 45 seconds before trying again.",
   "data": null
 }
 ```
 
-| HTTP Status | Scenario |
+| HTTP Status | Condition / Exception |
 |---|---|
-| `400 Bad Request` | Validation failure on request body |
-| `401 Unauthorized` | Invalid credentials |
-| `403 Forbidden` | Access denied |
-| `404 Not Found` | Requested resource does not exist |
-| `405 Method Not Allowed` | HTTP method is not supported on this endpoint |
-| `409 Conflict` | Resource already exists (e.g., duplicate email or category name) |
-| `500 Internal Server Error` | Unexpected server-side error (message is sanitized — not leaked to client) |
+| `400 Bad Request` | `@Valid` body validation errors, malformed parameters |
+| `401 Unauthorized` | Invalid username/password, expired access token |
+| `403 Forbidden` | Access denied (insufficient role privileges) |
+| `404 Not Found` | Entity not found (`ResourceNotFoundException`, `EntityNotFoundException`) |
+| `409 Conflict` | Duplicate record (`UserAlreadyExistsException`, `ResourceAlreadyExistsException`) |
+| `429 Too Many Requests` | `RateLimitExceededException` (with `Retry-After` header) |
+| `500 Internal Error` | Sanitized server error message (internal stack traces never exposed) |
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Testing & Quality Assurance
 
 ```bash
-# Run all tests
+# Execute unit and repository tests
 mvn clean test
 
-# Run tests and generate a report
+# Run tests and generate verification reports
 mvn clean verify
 ```
-
-The test suite uses Spring Boot's integration testing support with a real PostgreSQL connection configured in `application.yml`. Ensure your local database is available before running tests.
-
----
-
-## 📌 Project Disclaimer
-
-> This project was developed as a **learning and academic exercise** to explore and demonstrate proficiency in building a domain-driven REST API using the Spring Boot ecosystem.
-
-While the codebase reflects real-world structural patterns — including layered architecture, exception handling, database migrations, multi-profile configuration, and observability — it is **not intended for production deployment in its current state**.
-
-In particular:
-
-- **Authentication** is partially implemented. Password hashing with BCrypt is fully functional; however, **JWT token issuance and stateless session validation are not yet integrated**. User identity for protected endpoints is currently passed as a request parameter as a temporary measure during development.
-- **Authorization (RBAC)** — role-based access control to restrict endpoints by user role — is planned but not enforced at this stage.
-
-These aspects represent natural next steps in the evolution of the project, and the existing architecture has been designed to accommodate them cleanly.
 
 ---
 
 <div align="center">
 
-Built for learning purposes · Academic Practice Project
-
-Made with ❤️ using Spring Boot
+**Delicious Server — Built with ❤️ for High-Scale Food Delivery**
 
 </div>
