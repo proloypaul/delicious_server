@@ -4,12 +4,13 @@ import com.delicious.domain.coupon.dto.CouponValidationResponse;
 import com.delicious.domain.coupon.entity.Coupon;
 import com.delicious.domain.coupon.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -82,7 +83,9 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Coupon> getAllCoupons() {
-        return couponRepository.findAll();
+    public Page<Coupon> getAllCoupons(Pageable pageable) {
+        // Paginated fetch — prevents loading every coupon into JVM memory at once.
+        // Without Pageable, couponRepository.findAll() would do a full table scan.
+        return couponRepository.findAll(pageable);
     }
 }
