@@ -19,6 +19,14 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 1500ms
+      connect-timeout: 1500ms
+
 server:
   port: ${PORT:9080}
 
@@ -40,3 +48,8 @@ cookie:
   secure: ${COOKIE_SECURE:true}
   same-site: ${COOKIE_SAME_SITE:None}
   domain: ${COOKIE_DOMAIN:}
+
+rate-limit:
+  login:
+    max-attempts: ${LOGIN_RATE_LIMIT_ATTEMPTS:3}
+    window-seconds: ${LOGIN_RATE_LIMIT_WINDOW:120}

@@ -2,6 +2,7 @@ package com.delicious.domain.user.controller;
 
 import com.delicious.common.response.ApiResponse;
 import com.delicious.common.security.CookieService;
+import com.delicious.common.security.RateLimiterService;
 import com.delicious.domain.user.dto.AuthResponse;
 import com.delicious.domain.user.dto.LoginRequest;
 import com.delicious.domain.user.dto.RefreshTokenRequest;
@@ -27,6 +28,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final CookieService cookieService;
+    private final RateLimiterService rateLimiterService;
 
     @Operation(summary = "Register a new user", description = "Creates a new user account with hashed password and sets auth cookies")
     @PostMapping("/register")
@@ -46,8 +48,17 @@ public class AuthController {
 
     @Operation(summary = "Login user", description = "Authenticates a user, returns their details, and sets auth cookies")
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        // Enforce IP-based rate limiting (e.g. max 3 attempts per 2 minutes)
+        rateLimiterService.checkLoginRateLimit(servletRequest);
+
         AuthResponse response = authService.loginUser(request);
+
+        // Reset rate limiter on successful authentication
+        rateLimiterService.resetLoginRateLimit(servletRequest);
 
         ResponseCookie accessCookie = cookieService.createAccessTokenCookie(response.getToken());
         ResponseCookie refreshCookie = cookieService.createRefreshTokenCookie(response.getRefreshToken());
