@@ -27,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import com.delicious.domain.order.event.OrderCreatedInternalEvent;
+import com.delicious.domain.order.event.OrderStatusChangedInternalEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final RiderService riderService;
     private final com.delicious.domain.coupon.service.CouponService couponService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -106,6 +110,7 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(subTotal.subtract(discount));
 
         Order savedOrder = orderRepository.save(order);
+        eventPublisher.publishEvent(new OrderCreatedInternalEvent(savedOrder.getId(), customerId));
         return enrichOrderResponse(savedOrder);
     }
 
@@ -143,8 +148,10 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+        OrderStatus oldStatus = order.getOrderStatus();
         order.setOrderStatus(status);
         Order updatedOrder = orderRepository.save(order);
+        eventPublisher.publishEvent(new OrderStatusChangedInternalEvent(updatedOrder.getId(), oldStatus, status));
         return enrichOrderResponse(updatedOrder);
     }
 
